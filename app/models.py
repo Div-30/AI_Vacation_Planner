@@ -50,5 +50,12 @@ class UserResponse(UserBase):
     is_active: bool
     created_at: Optional[datetime] = None
 
+class TokenResponse(SQLModel):
+    access_token: str
+    token_type: str = "bearer"
+class TokenData(SQLModel):
+    id: Optional[int] = None
+    
+
 
 
