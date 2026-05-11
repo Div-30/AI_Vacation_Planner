@@ -4,6 +4,7 @@ from sqlmodel import Session
 
 from app import models
 from app.database import get_db
+from app.services import user_service
 from app.utils import verify_access_token
 
 
