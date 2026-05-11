@@ -63,6 +63,12 @@ class TripBase(SQLModel):
     trip_style: str = Field(max_length=100)
 class TripCreate(TripBase):
     pass
+class TripUpdate(SQLModel):
+    destination: Optional[str] = Field(default=None, max_length=50)
+    days: Optional[int] = Field(default=None, gt=0)
+    budget: Optional[int] = Field(default=None, gt=0)
+    trip_style: Optional[str] = Field(default=None, max_length=100)
+
 class TripResponse(TripBase):
     model_config = ConfigDict(from_attributes=True)
     id: int
