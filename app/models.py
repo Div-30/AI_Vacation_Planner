@@ -55,7 +55,24 @@ class TokenResponse(SQLModel):
     token_type: str = "bearer"
 class TokenData(SQLModel):
     id: Optional[int] = None
-    
+
+class TripBase(SQLModel):
+    destination: str = Field(max_length=50)
+    days: int = Field(gt=0)
+    budget: int = Field(gt=0)
+    trip_style: str = Field(max_length=100)
+class TripCreate(TripBase):
+    pass
+class TripResponse(TripBase):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    message: str
+
+
+
+
+
+
 
 
 
