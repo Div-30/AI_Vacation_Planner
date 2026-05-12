@@ -80,9 +80,9 @@ class DailyActivity(SQLModel):
     activities: list[str]
 class ItineraryBase(SQLModel):
     trip_id: int
-class ItineraryCreate(SQLModel):
+class ItineraryCreate(ItineraryBase):
     days: list[DailyActivity]
-class ItineraryResponse(SQLModel):
+class ItineraryResponse(ItineraryBase):
     itinerary: list[DailyActivity] = Field(validation_alias="days")
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 class ItineraryCreateResponse(ItineraryResponse):

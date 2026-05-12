@@ -20,8 +20,8 @@ def create_trip(trip: models.TripCreate, db: Session = Depends(get_db), current_
     new_trip = trip_service.create_trip(db, trip, current_user.id)
     return {**new_trip.model_dump(), "message": "Trip created successfully"}
 @router.get("/{id}", response_model=models.TripResponse)
-def get_trip_by_id(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    trip = trip_service.get_trip_by_id(db, current_user.id)
+def get_trip_by_id(id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    trip = trip_service.get_trip_by_id(db, trip_id = id, owner_id = current_user.id)
     if not trip:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"The trip with id {id} not found")
     return trip
