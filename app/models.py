@@ -72,6 +72,7 @@ class TripUpdate(SQLModel):
 class TripResponse(TripBase):
     model_config = ConfigDict(from_attributes=True)
     id: int
+class TripCreateResponse(TripBase):
     message: str
 
 class DailyActivity(SQLModel):
@@ -83,9 +84,9 @@ class ItineraryCreate(SQLModel):
     days: list[DailyActivity]
 class ItineraryResponse(SQLModel):
     itinerary: list[DailyActivity] = Field(validation_alias="days")
-    message: str
-
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+class ItineraryCreateResponse(ItineraryResponse):
+    message:str
     
 
 
