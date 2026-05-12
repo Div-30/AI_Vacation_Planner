@@ -7,8 +7,8 @@ def get_all_trips(db: Session, owner_id: int) -> list[models.Trip]:
     statement = select(models.Trip).where(models.Trip.owner_id == owner_id)
     return db.exec(statement).all()
 
-def get_trip_by_id(db: Session, owner_id: int) -> models.Trip | None:
-    statement = db.get(models.Trip, owner_id)
+def get_trip_by_id(db: Session, trip_id: int, owner_id: int) -> models.Trip | None:
+    statement = select(models.Trip).where(models.Trip.id == trip_id, models.Trip.owner_id == owner_id)
     return db.exec(statement).first()
 
 def create_trip(db: Session, trip: models.TripCreate, owner_id: int) -> models.Trip | None:
