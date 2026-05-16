@@ -25,13 +25,13 @@ def get_trip_by_id(id: int, db: Session = Depends(get_db), current_user: models.
     if not trip:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"The trip with id {id} not found")
     return trip
-@router.put("/", response_model=models.TripUpdate)
+@router.put("/{id}", response_model=models.TripUpdate)
 def update_trip(id: int, updated_trip: models.TripUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     trip = trip_service.update_trip(db, trip_id= id, owner_id=current_user.id, updated_trip= updated_trip)
     if not trip:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"The trip with id {id} not found")
     return trip
-@router.delete("/", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_trip(id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     trip = trip_service.delete_trip(db, trip_id=id, owner_id=current_user.id)
     if not trip:
