@@ -75,13 +75,20 @@ class TripResponse(TripBase):
 class TripCreateResponse(TripBase):
     message: str
 
+class ActivityDetail(SQLModel):
+    time: str
+    description: str
+    location: str
+
 class DailyActivity(SQLModel):
-    day: int
-    activities: list[str]
+    day_number: int
+    theme_or_focus: str
+    activities: list[ActivityDetail]
+
 class ItineraryBase(SQLModel):
     trip_id: int
 class ItineraryCreate(ItineraryBase):
-    days: list[DailyActivity]
+    pass
 class ItineraryResponse(ItineraryBase):
     itinerary: list[DailyActivity] = Field(validation_alias="days")
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
