@@ -4,7 +4,7 @@ from app.config import settings
 from app import models
 
 client = Anthropic(api_key=settings.anthropic_api_key)
-MODEL_NAME = "claude-3-haiku-20240307"
+MODEL_NAME = "claude-haiku-4-5"
 def generate_itinerary_json(trip: models.Trip) -> dict:
     """
     Takes a Trip database model, injects its data into the engineered prompt, calls Claude, and returns the parsed JSON dictionary.
@@ -23,8 +23,8 @@ Return ONLY a valid JSON object representing the daily itinerary. Do not include
   "total_days" : {trip.days},
   "itinerary": [
   {{
-    "day_number: 1,
-    "theme_or_focus: "...",
+    "day_number": 1,
+    "theme_or_focus": "...",
     "activities": [
       {{"time": "Morning", "description": "...", "location": "..."}}
       {{"time": "Afternoon", "description": "...", "location": "..."}}
@@ -45,5 +45,13 @@ Return ONLY a valid JSON object representing the daily itinerary. Do not include
     )
 
     raw_json_string = response.content[0].text
+    print(f"DEBUG - Claude Raw Response: {raw_json_string}")
+    start_id = raw_json_string.find("{")
+    end_id = raw_json_string.rfind("}")
 
-    return json.loads(raw_json_string)
+    if start_id != -1 and end_id != -1:
+        clean_json_string = raw_json_string[start_id:end_id + 1]
+    else:
+        clean_json_string = raw_json_string
+
+    return json.loads(clean_json_string)

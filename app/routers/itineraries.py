@@ -10,7 +10,7 @@ from app.services import itinerary_service, trip_service, llm_service
 router = APIRouter(prefix="/api/itineraries", tags=["Itineraries"])
 
 @router.post("/", response_model=models.ItineraryCreateResponse, status_code=status.HTTP_201_CREATED)
-def create_itinerary(request: models.ItineraryCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+def create_itinerary(request: models.ItineraryGenerateRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     trip = trip_service.get_trip_by_id(db, trip_id = request.trip_id, owner_id = current_user.id)
     if not trip:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"The trip with id {request.trip_id} not found Or unauthorized")
