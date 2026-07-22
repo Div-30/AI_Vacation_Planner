@@ -15,6 +15,12 @@ def create_itinerary(request: models.ItineraryGenerateRequest, db: Session = Dep
     if not trip:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"The trip with id {request.trip_id} not found Or unauthorized")
     llm_response_dict = llm_service.generate_itinerary_json(trip)
+    existing = itinerary_service.get_itinerary_by_trip_id(db, trip_id=request.trip_id)
+    if existing:
+        raise HTTPException(
+            status_code = status.HTTP_409_CONFLICT,
+            detail = f"An itinerary for trip {request.trip_id} already exists"
+        )
     itinerary_in = models.ItineraryCreate(
         trip_id = trip.id,
         days = llm_response_dict["itinerary"]
