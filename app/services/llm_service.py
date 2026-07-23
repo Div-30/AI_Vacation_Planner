@@ -113,7 +113,7 @@ Process:
             system= SYSTEM_PROMPT,
             max_tokens=3000,
             tools=TOOLS,
-            messages=messages
+            messages=messages,
             tools_choice={"type": "any"}
         )
         if response.stop_reason != "tool_use":
