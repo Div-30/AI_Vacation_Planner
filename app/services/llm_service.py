@@ -2,9 +2,18 @@ import json
 from anthropic import Anthropic
 from app.config import settings
 from app import models
+import httpx
 
 client = Anthropic(api_key=settings.anthropic_api_key)
 MODEL_NAME = "claude-haiku-4-5"
+SYSTEM_PROMPT= """You are an expert, local travel agent.
+Your job is to generate a highly realistic and structured itinerary.
+You have two tools available:
+- get_weather: use this first to get the current weather and forecast for the destination, so you can tailor activities (e.g.
+  indoor vs outdoor) to the expected conditions.
+- save_itinerary: use this to submit the final itinerary once you have checked the weather. This tool receives the structured
+  JSON of the itinerary."""
+
 def generate_itinerary_json(trip: models.Trip) -> dict:
     """
     Takes a Trip database model, injects its data into the engineered prompt, calls Claude, and returns the parsed JSON dictionary.
@@ -55,3 +64,18 @@ Return ONLY a valid JSON object representing the daily itinerary. Do not include
         clean_json_string = raw_json_string
 
     return json.loads(clean_json_string)
+
+TOOLS = [
+    {
+        "name": "get_weather",
+        "description": (
+            "Get the current weather and forecast for a destination city to help plan the itinerary"
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "destination": {"type": "string", "destination": "The city/country name"}
+            },
+        },
+    },
+]
