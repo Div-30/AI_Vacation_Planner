@@ -63,6 +63,36 @@ TOOLS = [
         }
     }
 ]
+
+def get_real_weather(destination: str) -> str:
+    try:
+        geo_code_url = f"https://geocoding-api.open-meteo.com/v1/search?name={destination}&count=1"
+        geo_response = httpx.get(geo_code_url)
+        geo_data = geo_response.json()
+
+        if not geo_data.get("results"):
+            return f"Could not find weather data for {destination}."
+        location = geo_data["results"][0]
+        lat = location["latitude"]
+        lon = location["longitude"]
+
+        weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true"
+        weather_response = httpx.get(weather_url)
+        weather_data = weather_response.json()
+
+        current = weather_data["current_weather"]
+        temp = current["temperature"]       
+        windspeed = current["windspeed"]
+        return f"The current weather in {destination} is {temp}°C with wind speeds of {windspeed} km/h."
+    except Exception as e:
+        return f"Failed to fetch weather for {destination}."
+
+def _execute_tool(tool_name: str, tool_input: dict) -> str:
+    if tool_name == "get_weather":
+        destination = tool_input.get("destination", "the destination")
+        return get_real_weather(destination)
+    return f"Unknown tool: {tool_name}"
+
 def generate_itinerary_json(trip: models.Trip) -> dict:
     """
     Takes a Trip database model, injects its data into the engineered prompt, calls Claude, and returns the parsed JSON dictionary.
