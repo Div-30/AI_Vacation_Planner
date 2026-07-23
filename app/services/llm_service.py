@@ -13,7 +13,22 @@ You have two tools available:
   indoor vs outdoor) to the expected conditions.
 - save_itinerary: use this to submit the final itinerary once you have checked the weather. This tool receives the structured
   JSON of the itinerary."""
-
+TOOLS = [
+    {
+        "name": "get_weather",
+        "description": (
+            "Get the current weather and forecast for a destination city to help plan the itinerary"
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "destination": {"type": "string", "destination": "The city/country name"}
+            },
+            "required": ["destination"]
+        },
+    },
+    
+]
 def generate_itinerary_json(trip: models.Trip) -> dict:
     """
     Takes a Trip database model, injects its data into the engineered prompt, calls Claude, and returns the parsed JSON dictionary.
@@ -65,17 +80,3 @@ Return ONLY a valid JSON object representing the daily itinerary. Do not include
 
     return json.loads(clean_json_string)
 
-TOOLS = [
-    {
-        "name": "get_weather",
-        "description": (
-            "Get the current weather and forecast for a destination city to help plan the itinerary"
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "destination": {"type": "string", "destination": "The city/country name"}
-            },
-        },
-    },
-]
