@@ -114,7 +114,7 @@ Process:
             max_tokens=3000,
             tools=TOOLS,
             messages=messages,
-            tools_choice={"type": "any"}
+            tool_choice={"type": "any"}
         )
         if response.stop_reason != "tool_use":
             raise ValueError("LLM failed to output a structured itinerary via tools.")
@@ -128,7 +128,7 @@ Process:
                 else:
                     result_text = _execute_tool(block.name, block.input)
                     tool_results.append({
-                        "type": "tool_results",
+                        "type": "tool_result",
                         "tool_use_id": block.id,
                         "content": result_text,
                     })
