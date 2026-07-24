@@ -10,6 +10,7 @@ This project follows a decoupled, enterprise-grade RESTful architecture using **
 * **Data Validation (`app/models.py` & `schemas`)**: Utilizes Pydantic to strictly type-check incoming JSON payloads (Base, Create, Update) and format outgoing responses (Response models), automatically stripping sensitive data like password hashes.
 * **Security Checkpoint (`app/oauth2.py` & `utils.py`)**: Implements OAuth2 with JWT (JSON Web Tokens). Every protected route requires a valid Bearer token. The system strictly enforces a **Private Data Model**, ensuring database queries mathematically restrict users to viewing and modifying only records tied to their specific `owner_id`.
 * **Database Management (`alembic/`)**: Uses Alembic for version-controlled database migrations. Complex nested data, such as daily itinerary schedules, are natively mapped to PostgreSQL's highly efficient `JSONB` columns.
+* **AI & Agentic Workflows (`app/services/llm_service.py`)**: Integrates large language models using an agentic loop with native Tool Use. Rather than relying on string parsing, the LLM iteratively executes tools to gather context (like live weather) and strictly structures its outputs for reliable itinerary generation.
 
 ---
 
