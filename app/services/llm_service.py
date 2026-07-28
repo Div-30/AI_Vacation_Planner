@@ -76,8 +76,8 @@ Process:
     messages = [
         {"role": "user", "content": prompt}
     ]
-
-    while True: 
+    MAX_ITERATIONS = 5  
+    for _ in range(MAX_ITERATIONS): 
         response = client.messages.create(
             model=MODEL_NAME,
             system= SYSTEM_PROMPT,
@@ -104,5 +104,7 @@ Process:
                     })
         if tool_results:
             messages.append({"role": "user", "content": tool_results})
+            
+        raise ValueError("LLM exceeded the maximum number of tool call iterations without producing an itinerary.")
 
 
