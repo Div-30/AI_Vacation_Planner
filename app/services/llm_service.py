@@ -30,37 +30,7 @@ TOOLS = [
     {
         "name": "save_itinerary",
         "description": "Save the fully generated itinerary in a structured format. Call this when you have gathered weather information and are ready to finalize the trip plan.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "destination": {"type": "string"},
-                "total_days": {"type": "integer"},
-                "itinerary": {"type": "array", 
-                              "items": {
-                                  "type": "object",
-                                  "properties": {
-                                      "day_number": {"type": "integer"},
-                                      "theme_or_focus": {"type": "string"},
-                                      "activities": {
-                                          "type": "array",
-                                          "items": {
-                                              "type": "object",
-                                              "properties": {
-                                                  "time": {"type": "string"},
-                                                  "description": {"type": "string"},
-                                                  "location": {"type": "string"}
-                                                },
-                                            "required": ["time", "description", "location"]
-                                        }
-                                    },
-                                "estimated_daily_cost": {"type": "string"}
-                            },
-                        "required": ["day_number", "theme_or_focus", "activities", "estimated_daily_cost"]
-                    }
-                }
-            },
-            "required": ["destination", "total_days", "itinerary"]
-        }
+        "input_schema": models.ItineraryLLMOutput.model_json_schema()
     }
 ]
 

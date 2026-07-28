@@ -88,6 +88,11 @@ class DailyActivity(SQLModel):
     activities: list[ActivityDetail]
     estimated_daily_cost: str | int
 
+class ItineraryLLMOutput(SQLModel):
+    destination: str
+    total_days: int
+    itinerary: list[DailyActivity]
+    
 class ItineraryBase(SQLModel):
     trip_id: int
 
