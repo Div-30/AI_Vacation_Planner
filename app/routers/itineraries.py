@@ -29,7 +29,7 @@ def create_itinerary(request: models.ItineraryGenerateRequest, db: Session = Dep
     )
     except ValidationError as e:
         raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"The AI generated an invalid itinerary format: {e.errors()}"
         )
     new_itinerary = itinerary_service.create_itinerary(db, itinerary_in)
