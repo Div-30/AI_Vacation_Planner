@@ -19,23 +19,6 @@ DOCUMENT_TYPES = {
 }
 
 def load_documents_from_directory(base_dir: str | Path) -> list[TravelDocument]: 
-    """
-     Recursively loads all .txt and .md files from the knowledge base
-        documents directory and wraps each file into a TravelDocument.
-
-        Expected folder structure inside base_dir:
-            documents/
-            ├── travel_guides/
-            │   └── paris_guide.txt
-            ├── local_tips/
-            │   └── tokyo_tips.md
-            ├── hidden_gems/
-            ├── faqs/
-            └── destination_notes/
-
-        The folder name determines the doc_type.
-        The filename (without extension) is used as the destination label.
-    """
     base_path = Path(base_dir)
     documents: list[TravelDocument] = []
 
