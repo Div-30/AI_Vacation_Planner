@@ -1,15 +1,10 @@
 from dataclasses import dataclass, field
 from langchain_text_splitters import RecursiveCharacterTextSplitter 
-from app.knowledge_base.ingestion import TravelDocument
+from app.knowledge_base.ingestion import BaseDocument, TravelDocument
 
 @dataclass
-class DocumentChunk:
-    content: str
-    doc_type: str
-    destination: str
-    source: str
-    chunk_index: int
-    metadata: dict = field(default_factory=dict)
+class DocumentChunk(BaseDocument):
+    chunk_index: int = 0
 
 CHUNK_SIZE = 800
 CHUNK_OVERLAY = 150

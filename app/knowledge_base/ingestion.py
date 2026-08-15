@@ -4,12 +4,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 @dataclass
-class TravelDocument:
+class BaseDocument:
     content: str
     doc_type: str
     destination: str
     source: str
     metadata: dict = field(default_factory=dict)
+@dataclass
+class TravelDocument(BaseDocument):
+    pass
 DOCUMENT_TYPES = {
     "travel_guides": "travel_guide",
     "local_tips": "local_tips",
