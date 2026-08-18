@@ -10,3 +10,5 @@ pydantic[email]
 anthropic==0.109.1
 httpx
 langchain-text-splitters
+sentence-transformers
+chromadb

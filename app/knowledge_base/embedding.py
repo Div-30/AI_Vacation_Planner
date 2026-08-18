@@ -27,8 +27,9 @@ def embed_chunks(chunks: list[DocumentChunk],
         convert_to_numpy=True,
         normalize_embeddings=True
     )
+    embedded_chunks: list[EmbeddedChunk] = []
     for chunk, vector in zip(chunks, embeddings):
-        embedded_chunks = EmbeddedChunk(
+        embedded_chunk = EmbeddedChunk(
             content=chunk.content, 
             doc_type=chunk.doc_type,
             destination=chunk.destination,
@@ -37,5 +38,5 @@ def embed_chunks(chunks: list[DocumentChunk],
             embedding=vector.tolist(),
             metadata=chunk.metadata,
         )
-        embedded_chunks.append(embedded_chunks)
+        embedded_chunks.append(embedded_chunk)
     return embedded_chunks
