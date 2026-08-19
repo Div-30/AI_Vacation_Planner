@@ -1,24 +1,10 @@
 from app.knowledge_base.retrieval import retrieve_relevant_context
 
 def assemble_context_for_destination(destination: str) -> str:
-    results = []
-    results += retrieve_relevant_context(
-        query=f"travel guide tips and highlights for {destination}",
+    results = retrieve_relevant_context(
+        query=f"travel tips, highlights, and recommendations for {destination}",
         destination=destination,
-        doc_type="travel_guide",
-        limit=2,
-    )
-    results += retrieve_relevant_context(
-        query=f"local insider tips and recommendations for {destination}",
-        destination=destination,
-        doc_type="local_tips",
-        limit=2,
-    )
-    results += retrieve_relevant_context(
-        query=f"hidden gems and off the beaten path spots in {destination}",
-        destination=destination,
-        doc_type="hidden_gems",
-        limit=1,
+        limit=5,
     )
     if not results:
         return ""
