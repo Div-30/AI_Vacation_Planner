@@ -7,13 +7,13 @@ class DocumentChunk(BaseDocument):
     chunk_index: int = 0
 
 CHUNK_SIZE = 800
-CHUNK_OVERLAY = 150
+CHUNK_OVERLAP = 150
 
 def chunk_documents(documents: list[TravelDocument]) -> list[DocumentChunk]:
     splitters = RecursiveCharacterTextSplitter(
-        Chunk_size = CHUNK_SIZE,
-        chunk_overlay = CHUNK_OVERLAY,
-        separators=["n/n", "/n", ". ", " ", ""]
+        chunk_size = CHUNK_SIZE,
+        chunk_overlap = CHUNK_OVERLAP,
+        separators=["\n\n", "\n", ". ", " ", ""]
     )
 
     all_chunks: list[DocumentChunk] = []
