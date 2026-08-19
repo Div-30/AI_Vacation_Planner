@@ -33,4 +33,4 @@ def chunk_documents(documents: list[TravelDocument]) -> list[DocumentChunk]:
                 }
             )
             all_chunks.append(chunk)
-        return all_chunks
+    return all_chunks
