@@ -7,8 +7,8 @@ EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
 
 @dataclass
 class EmbeddedChunk(BaseDocument):
-    chunk_index: int
-    embedding: list[float]
+    chunk_index: int = 0
+    embedding: list[float] = field(default_factory=list)
 
 def load_embedding_model() -> SentenceTransformer:
     return SentenceTransformer(EMBEDDING_MODEL_NAME)
