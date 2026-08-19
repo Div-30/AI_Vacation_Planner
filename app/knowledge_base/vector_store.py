@@ -37,7 +37,7 @@ def index_embedded_chunks(chunks: list[EmbeddedChunk], collection: chromadb.Coll
             "chunk_index": chunk.chunk_index,
         })
     collection.upsert(
-        ids=id,
+        ids=ids,
         embeddings=embeddings,
         documents=documents,
         metadatas=metadatas
