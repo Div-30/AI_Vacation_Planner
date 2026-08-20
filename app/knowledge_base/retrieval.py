@@ -35,7 +35,7 @@ def retrieve_relevant_context(
         where=where_filter if where_filter else None
     )
     retrieved_chunks = []
-    if results and results["document"]:
+    if results and results["documents"]:
         for doc_text, metadata, score in zip(
             results["documents"][0],
             results["metadatas"][0],
