@@ -17,7 +17,7 @@ def assemble_context_for_destination(destination: str) -> str:
     for i, chunk in enumerate(results, start=1):
         doc_type_label = chunk.get("doc_type", "general").replace("_", " ").title()
         context_lines.append(f"[Source {i} - {doc_type_label}]")
-        context_lines.append(chunk(["content"]))
+        context_lines.append(chunk["content"])
         context_lines.append("")
     context_lines.append("=== END OF KNOWLEDGE BASE ===")
 
