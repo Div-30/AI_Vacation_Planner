@@ -13,3 +13,4 @@ __pycache__/
 
 .env
 *.db
+app/knowledge_base/chroma_db/
