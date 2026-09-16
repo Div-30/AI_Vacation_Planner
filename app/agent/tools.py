@@ -2,6 +2,7 @@ from json import tool
 
 import httpx
 
+from app import models
 from app.knowledge_base.retrieval import retrieve_relevant_context
 
 
@@ -45,3 +46,14 @@ def search_travel_knowledge(destination: str, topic: str = "general travel tips,
         f"[{chunk.get('doc_type', 'general').replace('_', ' ').title()}] {chunk['content']}"
         for chunk in results
     )
+
+SAVE_ITINERARY_TOOL = {
+    "name": "save_itinerary",
+    "description": (
+        "Save the fully generated itinerary in a structured format. Call this once."
+        "you are done gathering information and are ready to finalize the trip plan."
+    ),
+    "input_schema": models.ItineraryLLMOutput.model_json_schema(),
+}
+RUNTIME_TOOLS = [get_weather, search_travel_knowledge]
+ALL_TOOLS = [*RUNTIME_TOOLS, SAVE_ITINERARY_TOOL]
