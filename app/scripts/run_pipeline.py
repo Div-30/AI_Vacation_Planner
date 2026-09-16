@@ -8,7 +8,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.knowledge_base.pipeline import run_indexing_pipeline
+from app.scripts.pipeline import run_indexing_pipeline
 
 logging.basicConfig(
         level=logging.INFO,
