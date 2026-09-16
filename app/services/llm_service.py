@@ -1,3 +1,4 @@
+from app.knowledge_base.context_assembler import assemble_context_for_destination
 import json
 from anthropic import Anthropic
 from app.config import settings
@@ -64,11 +65,14 @@ def _execute_tool(tool_name: str, tool_input: dict) -> str:
     return f"Unknown tool: {tool_name}"
 
 def generate_itinerary_json(trip: models.Trip) -> dict:
-    prompt = f""" Plan a highly realistic {trip.days}-day itinerary for a trip to {trip.destination}.
+    knowledge_context = assemble_context_for_destination(trip.destination)
+    prompt = f"""{knowledge_context}
+Plan a highly realistic {trip.days}-day itinerary for a trip to {trip.destination}.
 Strict Constraints:
 1. Budget: The total cost must strictly align with a '{trip.budget}' budget tier. Suggest realistic activities, transport, and dining that fit this constraint.
 2. Geography: All suggested locations, restaurants and activities MUST be physically located within {trip.destination} or a highly accessible travel distance. Do not hallucinate locations.
 3. Travel style: Tailor the activities, pacing, and recommendations entirely to a '{trip.trip_style}' travel style.
+4. Knowledge Base: Where relevant, incorporate the specific local tips, hidden gems and recommendations from the travel knowledge base provided above.
 Process:
 1. Call `get_weather` to get the weather for {trip.destination}.
 2. Then, call `save_itinerary` to output the final plan.
@@ -105,6 +109,6 @@ Process:
         if tool_results:
             messages.append({"role": "user", "content": tool_results})
             
-        raise ValueError("LLM exceeded the maximum number of tool call iterations without producing an itinerary.")
+    raise ValueError("LLM exceeded the maximum number of tool call iterations without producing an itinerary.")
 
 
