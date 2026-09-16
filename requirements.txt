@@ -13,3 +13,5 @@ langchain-text-splitters
 sentence-transformers
 chromadb
 apscheduler
+langgraph
+langchain-anthropic
