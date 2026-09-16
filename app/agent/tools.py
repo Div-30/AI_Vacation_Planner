@@ -2,6 +2,8 @@ from json import tool
 
 import httpx
 
+from app.knowledge_base.retrieval import retrieve_relevant_context
+
 
 @tool
 def get_weather(destination: str) -> str:
@@ -26,3 +28,20 @@ def get_weather(destination: str) -> str:
         )
     except Exception:
         return f"Failed to fetch weather for {destination}"
+
+@tool
+def search_travel_knowledge(destination: str, topic: str = "general travel tips, highlights, and recommandations") -> str:
+    """Search the curated local travel knowledge base for a destination.
+    Narrow the search with `topic` (e.g. 'food', 'safety', 'hidden gems', 'transportation')
+    when you need something more specific than general tips."""
+    results = retrieve_relevant_context(
+        query=f"{topic} for {destination}",
+        destination=destination,
+        limit=5
+    )
+    if not results:
+        return f"No curated travel knowledge found for {destination}"
+    return "\n\n".join(
+        f"[{chunk.get('doc_type', 'general').replace('_', ' ').title()}] {chunk['content']}"
+        for chunk in results
+    )
