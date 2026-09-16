@@ -33,12 +33,12 @@ def get_weather(destination: str) -> str:
 @tool
 def search_travel_knowledge(destination: str, topic: str = "general travel tips, highlights, and recommandations") -> str:
     """Search the curated local travel knowledge base for a destination.
-    Narrow the search with `topic` (e.g. 'food', 'safety', 'hidden gems', 'transportation')
+    Narrow the search with `topic` (e.g. 'food', 'safety', 'hidden gems', 'transportation', 'pricing')
     when you need something more specific than general tips."""
     results = retrieve_relevant_context(
         query=f"{topic} for {destination}",
         destination=destination,
-        limit=5
+        limit=5,
     )
     if not results:
         return f"No curated travel knowledge found for {destination}"
