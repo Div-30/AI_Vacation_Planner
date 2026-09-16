@@ -1,0 +1,15 @@
+fastapi[standard]
+sqlalchemy
+sqlmodel
+alembic
+python-jose[cryptography]
+passlib[bcrypt]
+bcrypt==4.0.1
+python-multipart
+pydantic[email]
+anthropic==0.109.1
+httpx
+langchain-text-splitters
+sentence-transformers
+chromadb
+apscheduler
