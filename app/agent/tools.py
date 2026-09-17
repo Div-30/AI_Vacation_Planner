@@ -47,6 +47,43 @@ def search_travel_knowledge(destination: str, topic: str = "general travel tips,
         for chunk in results
     )
 
+PLACE_CATEGORIES: dict[str, str] = {
+    "restaurant": "amenity=restaurant",
+    "cafe": "amenity=cafe",
+    "attraction": "tourism=attraction",
+    "museum": "tourism=museum",
+    "hotel": "tourism=hotel",
+    "park": "leisure=park",
+}
+
+@tool
+def find_places(destination: str, category: str = "attraction") -> str:
+    """Find real points of interest near a destination. Use `category` to narrow
+        results: 'restaurant', 'cafe', 'attraction', 'museum', 'hotel', or 'park'."""
+    try:
+        geo_response = httpx.get(
+            f"https://geocoding-api.open-meteo.com/v1/search?name={destination}&count=1"
+        )
+        geo_data = geo_response.json()
+        if not geo_data.get("results"):
+            return f"Could not find weather data for {destination}."
+        location = geo_data["results"][0]
+        lat, lon = location["latitude"], location["longitude"]
+
+        key, value = PLACE_CATEGORIES.get(category, PLACE_CATEGORIES["attraction"]).split("=")
+        overpass_query = f'[out:json];node["{key}"="{value}"](around:3000,{lat},{lon});out 10;' 
+        places_response = httpx.post(
+            "https://overpass-api.de/api/interpreter",
+            data={"data": overpass_query},
+        )
+        elements = places_response.json().get("elements", [])
+        names = [el["tags"]["name"] for el in elements if el.get("tags", {}).get("name")]
+        if not names:
+            return f"No named {category} found near {destination}."
+        return f"{category.title()}s near {destination}: " + ", ".join(names[:10])
+    except Exception:
+        return f"Failed to featch places for {destination}"
+
 SAVE_ITINERARY_TOOL = {
     "name": "save_itinerary",
     "description": (
