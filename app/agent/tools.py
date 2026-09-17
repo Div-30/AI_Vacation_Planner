@@ -84,6 +84,37 @@ def find_places(destination: str, category: str = "attraction") -> str:
     except Exception:
         return f"Failed to featch places for {destination}"
 
+@tool
+def get_route(origin: str, destination: str) -> str:
+    """Get the travel distance and estimate driving time between two locations (e.g: a hotel and an attraction, or two cities)."""
+    try:
+        def geocode(place: str) -> tuple[float, float]:
+            response = httpx.get(
+                f"https://geocoding-api.open-meteo.com/v1/search?name={place}&count=1"
+            )
+            result = response.json()["result"][0]
+            return result["longitude"], result["latitude"]
+        
+        origin_lon, origin_lat = geocode(origin)
+        dest_lon, dest_lat = geocode(destination)
+
+        route_response = httpx.get(
+            f"http://router.project-osrm.org/route/v1/driving/"
+            f"{origin_lon},{origin_lat};{dest_lon},{dest_lat}?overview=false"
+        )
+        route_data = route_response.json()
+        if route_data.get("code") != "Ok":
+            return f"Could not calculate a route from {origin} to {destination}."
+        route = route_data["routes"][0]
+        distance_km = route["distance"] / 1000
+        duration_min = route["duration"] / 60
+        return(
+            f"Route from {origin} to {destination}: {distance_km:.1f} km, "
+            f"approx. {duration_min:.0f} min by car"
+        )
+    except Exception:
+        return f"Failed to calculate route from {origin} to {destination}"
+
 SAVE_ITINERARY_TOOL = {
     "name": "save_itinerary",
     "description": (
@@ -92,5 +123,5 @@ SAVE_ITINERARY_TOOL = {
     ),
     "input_schema": models.ItineraryLLMOutput.model_json_schema(),
 }
-RUNTIME_TOOLS = [get_weather, search_travel_knowledge]
+RUNTIME_TOOLS = [get_weather, search_travel_knowledge, find_places, get_route]
 ALL_TOOLS = [*RUNTIME_TOOLS, SAVE_ITINERARY_TOOL]
