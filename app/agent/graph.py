@@ -1,9 +1,10 @@
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
-from langgraph.graph import END
+from langgraph.graph import END, START, StateGraph
+from langgraph.prebuilt import ToolNode
 
 from app.agent.state import ItineraryAgentState
-from app.agent.tools import ALL_TOOLS
+from app.agent.tools import ALL_TOOLS, RUNTIME_TOOLS
 from app.config import settings
 
 
@@ -70,3 +71,19 @@ def finalize(state: ItineraryAgentState) -> dict:
         if call["name"] == "save_itinerary":
             return {"itinerary": call["args"]}
     return {}
+def build_itinerary_graph():
+    graph = StateGraph(ItineraryAgentState)
+    graph.add_node("agent", call_agent)
+    graph.add_node("tools", ToolNode(RUNTIME_TOOLS))
+    graph.add_node("finalize", finalize)
+
+    graph.add_edge(START, "agent")
+    graph.add_conditional_edges("agent", route_after_agent)
+    graph.add_edge("tools", "agent")
+    graph.add_edges("finalize", END)
+
+    return graph.compile()
+
+itinerary_graph = build_itinerary_graph()
+    
+    

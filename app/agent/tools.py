@@ -92,7 +92,7 @@ def get_route(origin: str, destination: str) -> str:
             response = httpx.get(
                 f"https://geocoding-api.open-meteo.com/v1/search?name={place}&count=1"
             )
-            result = response.json()["result"][0]
+            result = response.json()["results"][0]
             return result["longitude"], result["latitude"]
         
         origin_lon, origin_lat = geocode(origin)
