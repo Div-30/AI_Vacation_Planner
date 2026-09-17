@@ -1,5 +1,6 @@
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
+from langgraph.graph import END
 
 from app.agent.state import ItineraryAgentState
 from app.agent.tools import ALL_TOOLS
@@ -41,7 +42,7 @@ def call_agent(state: ItineraryAgentState) -> dict:
     new_messages = []
     if not state["messages"]:
         user_prompt = (
-            f"Plan a highly realistic {state['days']}-day itinerary for a trip to"
+            f"Plan a highly realistic {state['days']}-day itinerary for a trip to "
             f"{state['destination']}.\n"
             f"Budget tier: {state['budget']}.\n"
             f"Travel style: {state['trip_style']}.\n"
@@ -54,3 +55,18 @@ def call_agent(state: ItineraryAgentState) -> dict:
     new_messages.append(response)
     return {"messages": new_messages}
 
+def route_after_agent(state: ItineraryAgentState) -> str:
+    last_message = state["messages"][-1]
+    tool_calls = getattr(last_message, "tool_calls", None)
+    if not tool_calls:
+        return END
+    for call in tool_calls:
+        if call["name"] == "save_itinerary":
+            return "finalize"
+    return "tools"
+def finalize(state: ItineraryAgentState) -> dict:
+    last_message = state["messages"][-1]
+    for call in last_message.tool_calls:
+        if call["name"] == "save_itinerary":
+            return {"itinerary": call["args"]}
+    return {}
