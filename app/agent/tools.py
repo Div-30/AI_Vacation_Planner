@@ -1,10 +1,9 @@
-from json import tool
+from langchain_core.tools import tool
 
 import httpx
 
 from app import models
 from app.knowledge_base.retrieval import retrieve_relevant_context
-
 
 @tool
 def get_weather(destination: str) -> str:
@@ -66,7 +65,7 @@ def find_places(destination: str, category: str = "attraction") -> str:
         )
         geo_data = geo_response.json()
         if not geo_data.get("results"):
-            return f"Could not find weather data for {destination}."
+            return f"Could not find location data for {destination}."
         location = geo_data["results"][0]
         lat, lon = location["latitude"], location["longitude"]
 
@@ -82,7 +81,7 @@ def find_places(destination: str, category: str = "attraction") -> str:
             return f"No named {category} found near {destination}."
         return f"{category.title()}s near {destination}: " + ", ".join(names[:10])
     except Exception:
-        return f"Failed to featch places for {destination}"
+        return f"Failed to fetch places for {destination}"
 
 @tool
 def get_route(origin: str, destination: str) -> str:
@@ -115,13 +114,10 @@ def get_route(origin: str, destination: str) -> str:
     except Exception:
         return f"Failed to calculate route from {origin} to {destination}"
 
-SAVE_ITINERARY_TOOL = {
-    "name": "save_itinerary",
-    "description": (
-        "Save the fully generated itinerary in a structured format. Call this once."
-        "you are done gathering information and are ready to finalize the trip plan."
-    ),
-    "input_schema": models.ItineraryLLMOutput.model_json_schema(),
-}
+@tool("save_itinerary", args_schema=models.ItineraryLLMOutput)
+def save_itinerary_tool(**kwargs) -> str:
+    """Save the fully generated itinerary in a structured format. Call this once
+    you are done gathering information and are ready to finalize the trip plan."""
+    return "saved"
 RUNTIME_TOOLS = [get_weather, search_travel_knowledge, find_places, get_route]
-ALL_TOOLS = [*RUNTIME_TOOLS, SAVE_ITINERARY_TOOL]
+ALL_TOOLS = [*RUNTIME_TOOLS, save_itinerary_tool]
