@@ -1,4 +1,4 @@
-from langchain_anthropic import ChatAnthropic
+from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode
@@ -7,8 +7,6 @@ from app.agent.state import ItineraryAgentState
 from app.agent.tools import ALL_TOOLS, RUNTIME_TOOLS
 from app.config import settings
 
-
-MODEL_NAME = "claude-haiku-4-5"
 
 SYSTEM_PROMPT = """You are an expert, local travel agent responsible for building highly realistic, structured travel itineraries.
 
@@ -32,12 +30,19 @@ Guidelines:
 3. Travel style: tailor pacing and activities to the requested style.
 4. Ground your plan in real data from the tools above rather than assumptions.
 """
-model = ChatAnthropic(
-    model = MODEL_NAME,
-    api_key = settings.anthropic_api_key,
-    max_token = 3000,
+
+PROVIDER_API_KEYS = {
+    "anthropic": settings.anthropic_api_key,
+    "google_genai": settings.google_api_key,
+}
+
+llm = init_chat_model(
+    model=settings.llm_model,
+    model_provider=settings.llm_provider,
+    api_key=PROVIDER_API_KEYS.get(settings.llm_provider),
+    max_tokens=3000,
 )
-model_with_tools = model.bind_tools(ALL_TOOLS, tool_choice="any")
+model_with_tools = llm.bind_tools(ALL_TOOLS, tool_choice="any")
 
 def call_agent(state: ItineraryAgentState) -> dict:
     new_messages = []
@@ -80,7 +85,7 @@ def build_itinerary_graph():
     graph.add_edge(START, "agent")
     graph.add_conditional_edges("agent", route_after_agent)
     graph.add_edge("tools", "agent")
-    graph.add_edges("finalize", END)
+    graph.add_edge("finalize", END)
 
     return graph.compile()
 

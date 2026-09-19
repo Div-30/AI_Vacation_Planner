@@ -6,13 +6,21 @@ from app.knowledge_base.vector_store import (
     get_or_create_collection,
 )
 
+_model = None
+
+def _get_embedding_model() -> SentenceTransformer:
+    global _model
+    if _model is None:
+        _model = SentenceTransformer("all-MiniLM-L6-v2")
+    return _model
+
 def retrieve_relevant_context(
      query: str,
      destination: str | None = None,
      doc_type: str | None = None,
      limit: int = 3,
 ) -> list[dict]:
-    model = SentenceTransformer("all-MiniLM-L6-v2")
+    model = _get_embedding_model()
     client = get_vector_store_client()
     collection = get_or_create_collection(client)
 
