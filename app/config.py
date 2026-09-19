@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -6,7 +8,10 @@ class Settings(BaseSettings):
     secret_key: str
     algorithm: str
     access_token_expire_minutes: int
-    anthropic_api_key: str
+    llm_provider: str = "google_genai"
+    llm_model: str = "gemini-3.5-flash-lite"
+    anthropic_api_key: Optional[str] = None
+    google_api_key: Optional[str] = None
 
     model_config = SettingsConfigDict(env_file=".env")
 

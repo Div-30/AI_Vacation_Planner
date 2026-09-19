@@ -13,3 +13,7 @@ langchain-text-splitters
 sentence-transformers
 chromadb
 apscheduler
+langchain
+langgraph
+langchain-anthropic
+langchain-google-genai
