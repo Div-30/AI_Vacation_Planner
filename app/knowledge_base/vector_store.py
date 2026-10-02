@@ -1,3 +1,5 @@
+import threading
+
 import chromadb
 from chromadb.config import Settings
 from pathlib import Path 
@@ -7,11 +9,18 @@ from app.knowledge_base.embedding import EmbeddedChunk
 CHROMA_PERSIST_DIR = Path(__file__).parent / "chroma_db"
 COLLECTION_NAME = "travel_knowledge_base"
 
+_client = None
+_client_lock = threading.Lock()
 def get_vector_store_client() -> chromadb.PersistentClient:
-    return chromadb.PersistentClient(
-        path=str(CHROMA_PERSIST_DIR),
-        settings=Settings(anonymized_telemetry=False),
-    )
+    global _client
+    if _client is None:
+        with _client_lock:
+            if _client is None:
+                _client = chromadb.PersistentClient(
+                    path = str(CHROMA_PERSIST_DIR),
+                    settings = Settings(anonymized_telemetry=False),
+                )
+    return _client
 
 def get_or_create_collection(client: chromadb.PersistentClient) -> chromadb.Collection:
     return client.get_or_create_collection(
