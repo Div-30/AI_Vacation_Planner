@@ -17,3 +17,4 @@ langchain
 langgraph
 langchain-anthropic
 langchain-google-genai
+pyttsx3
