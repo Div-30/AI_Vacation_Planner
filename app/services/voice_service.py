@@ -50,4 +50,15 @@ def itinerary_to_speech_text(destination: str, days: list[dict]) -> str:
         for activity in day["activities"]:
             lines.append(f"At {activity['time']}, {activity['description']} at {activity['location']}.")
     return " ".join(lines)
-    
+
+def synthesize_speech(text: str) -> bytes:
+    engine = pyttsx3.init()
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_file:
+        tmp_path = tmp_file.name
+    try:
+        engine.save_to_file(text, tmp_path)
+        engine.runAndWait()
+        with open(tmp_path, "rb") as f:
+            return f.read()
+    finally:
+        os.remove(tmp_path)
