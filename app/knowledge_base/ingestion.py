@@ -24,7 +24,7 @@ def load_documents_from_directory(base_dir: str | Path) -> list[TravelDocument]:
         if not raw_text:
             continue
         destination = file_path.stem.replace("_", " ").title()
-        doc_type = file_path.relative_to(base_path).parent.name
+        doc_type = file_path.relative_to(base_path).parent.name or "general"
 
         doc = TravelDocument(
             content=raw_text,
