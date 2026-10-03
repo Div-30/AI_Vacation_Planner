@@ -1,5 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, Response, status
 from sqlmodel import Session
 
 from app import models
@@ -39,4 +38,4 @@ def get_itinerary_audio(
     speech_text = voice_service.itinerary_to_speech_text(trip.destination, itinerary.days)
     audio_bytes = voice_service.synthesize_speech(speech_text)
 
-    return StreamingResponse(iter([audio_bytes]), media_type="audio/wav")
+    return Response(content=audio_bytes, media_type="audio/wav")

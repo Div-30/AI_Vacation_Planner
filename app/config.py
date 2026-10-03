@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int
     llm_provider: str = "google_genai"
     llm_model: str = "gemini-3.5-flash-lite"
-    voice_llm_model: str = "gemini-1.5-flash"
+    voice_llm_model: str = "gemini-3.8-flash"
     anthropic_api_key: Optional[str] = None
     google_api_key: Optional[str] = None
     
