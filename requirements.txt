@@ -17,3 +17,6 @@ langchain
 langgraph
 langchain-anthropic
 langchain-google-genai
+mcp
+langchain-mcp-adapters
+
