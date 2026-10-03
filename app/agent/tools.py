@@ -1,6 +1,5 @@
 from langchain_core.tools import tool
 
-import httpx
 
 from app import models
 from app.knowledge_base.retrieval import retrieve_relevant_context
@@ -23,20 +22,10 @@ def search_travel_knowledge(destination: str, topic: str = "general travel tips,
         for chunk in results
     )
 
-PLACE_CATEGORIES: dict[str, str] = {
-    "restaurant": "amenity=restaurant",
-    "cafe": "amenity=cafe",
-    "attraction": "tourism=attraction",
-    "museum": "tourism=museum",
-    "hotel": "tourism=hotel",
-    "park": "leisure=park",
-}
-
 
 @tool("save_itinerary", args_schema=models.ItineraryLLMOutput)
 def save_itinerary_tool(**kwargs) -> str:
     """Save the fully generated itinerary in a structured format. Call this once
     you are done gathering information and are ready to finalize the trip plan."""
     return "saved"
-RUNTIME_TOOLS = [get_weather, search_travel_knowledge, find_places, get_route]
-ALL_TOOLS = [*RUNTIME_TOOLS, save_itinerary_tool]
+NATIVE_TOOLS = [search_travel_knowledge]
