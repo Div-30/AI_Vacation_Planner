@@ -3,8 +3,9 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode
 
+from app.agent.mcp_client import load_mcp_tools
 from app.agent.state import ItineraryAgentState
-from app.agent.tools import ALL_TOOLS, RUNTIME_TOOLS
+from app.agent.tools import NATIVE_TOOLS, save_itinerary_tool
 from app.config import settings
 
 
@@ -42,24 +43,6 @@ llm = init_chat_model(
     api_key=PROVIDER_API_KEYS.get(settings.llm_provider),
     max_tokens=3000,
 )
-model_with_tools = llm.bind_tools(ALL_TOOLS, tool_choice="any")
-
-def call_agent(state: ItineraryAgentState) -> dict:
-    new_messages = []
-    if not state["messages"]:
-        user_prompt = (
-            f"Plan a highly realistic {state['days']}-day itinerary for a trip to "
-            f"{state['destination']}.\n"
-            f"Budget tier: {state['budget']}.\n"
-            f"Travel style: {state['trip_style']}.\n"
-            "Use your tools to check the weather, find real places, verify routes, "
-            "and pull local knowledge before finalizing the plan"
-        )
-        new_messages.append(HumanMessage(content=user_prompt))
-    conversation = [SystemMessage(content=SYSTEM_PROMPT), *state["messages"], *new_messages]
-    response = model_with_tools.invoke(conversation)
-    new_messages.append(response)
-    return {"messages": new_messages}
 
 def route_after_agent(state: ItineraryAgentState) -> str:
     last_message = state["messages"][-1]
@@ -70,16 +53,40 @@ def route_after_agent(state: ItineraryAgentState) -> str:
         if call["name"] == "save_itinerary":
             return "finalize"
     return "tools"
+
 def finalize(state: ItineraryAgentState) -> dict:
     last_message = state["messages"][-1]
     for call in last_message.tool_calls:
         if call["name"] == "save_itinerary":
             return {"itinerary": call["args"]}
     return {}
-def build_itinerary_graph():
+
+async def build_itinerary_graph():
+    mcp_tools = await load_mcp_tools()
+    runtime_tools = [*NATIVE_TOOLS, *mcp_tools]
+    all_tools = [*runtime_tools, save_itinerary_tool]
+    model_with_tools = llm.bind_tools(all_tools, tool_choice="any")
+
+    def call_agent(state: ItineraryAgentState) -> dict:
+        new_messages = []
+        if not state["messages"]:
+            user_prompt = (
+                f"Plan a highly realistic {state['days']}-day itinerary for a trip to "
+                f"{state['destination']}.\n"
+                f"Budget tier: {state['budget']}.\n"
+                f"Travel style: {state['trip_style']}.\n"
+                "Use your tools to check the weather, find real places, verify routes, "
+                "and pull local knowledge before finalizing the plan"
+            )
+            new_messages.append(HumanMessage(content=user_prompt))
+        conversation = [SystemMessage(content=SYSTEM_PROMPT), *state["messages"], *new_messages]
+        response = model_with_tools.invoke(conversation)
+        new_messages.append(response)
+        return {"messages": new_messages}
+
     graph = StateGraph(ItineraryAgentState)
     graph.add_node("agent", call_agent)
-    graph.add_node("tools", ToolNode(RUNTIME_TOOLS))
+    graph.add_node("tools", ToolNode(runtime_tools))
     graph.add_node("finalize", finalize)
 
     graph.add_edge(START, "agent")
@@ -89,6 +96,13 @@ def build_itinerary_graph():
 
     return graph.compile()
 
-itinerary_graph = build_itinerary_graph()
-    
-    
+_itinerary_graph = None
+
+async def init_itinerary_graph():
+    global _itinerary_graph
+    _itinerary_graph = await build_itinerary_graph()
+
+def get_itinerary_graph():
+    if _itinerary_graph is None:
+        raise RuntimeError("Itinerary graph has not been initialised yet.")
+    return _itinerary_graph    
