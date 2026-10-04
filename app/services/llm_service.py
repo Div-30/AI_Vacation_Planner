@@ -1,5 +1,5 @@
 from app import models
-from app.agent.graph import itinerary_graph
+from app.agent.graph import get_itinerary_graph
 
 
 def generate_itinerary_json(trip: models.Trip) -> dict:
@@ -11,6 +11,7 @@ def generate_itinerary_json(trip: models.Trip) -> dict:
         "trip_style": trip.trip_style,
         "itinerary": None,
     }
+    itinerary_graph = get_itinerary_graph()
     result = itinerary_graph.invoke(initial_state)
 
     if not result.get("itinerary"):
