@@ -1,0 +1,16 @@
+# =========================
+# Python & Virtual Env
+# =========================
+.venv/
+__pycache__/
+*.pyc
+
+# =========================
+# IDEs & Editors
+# =========================
+.idea/
+.vscode/
+
+.env
+*.db
+app/knowledge_base/chroma_db/
