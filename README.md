@@ -73,7 +73,10 @@ This project is **provider-agnostic**: the LLM provider and model are configurat
 - `LLM_PROVIDER` — which provider powers the itinerary agent's tool-calling loop (`app/agent/graph.py`).
 - `LLM_MODEL` — the specific model ID used by the itinerary agent (must belong to `LLM_PROVIDER`).
 - `VOICE_LLM_MODEL` — the model used for voice trip extraction (`app/services/voice_service.py`). This must support multimodal audio input, since raw audio bytes are sent directly to it rather than pre-transcribed text.
-- `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY` — only the key matching your chosen provider(s) is required; set both if you want the flexibility to switch without redeploying.
+- `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY` — the key matching your chosen `LLM_PROVIDER` for the itinerary
+  agent. **Note:** Voice extraction (`voice_service.py`) relies directly on Gemini's multimodal audio
+  support and always uses `ChatGoogleGenerativeAI`. Therefore, `GOOGLE_API_KEY` is **always required** if
+  using the voice feature, even when `LLM_PROVIDER=anthropic`.
 
 ### Switching providers
 
@@ -126,7 +129,9 @@ sudo -u postgres psql -c "CREATE DATABASE vacation_planner;"
 
 ### 5. Configure Environment Variables
 
-Create a `.env` file in the root directory of your project based on the provided `.env.example`. At minimum, set `DATABASE_URL`, `SECRET_KEY`, and the API key for whichever LLM provider you choose (see [LLM Integration](#llm-integration) above for provider/model options).
+Create a `.env` file in the root directory of your project based on the provided `.env.example`. At
+minimum, set `DATABASE_URL`, `SECRET_KEY`, and the API key for your chosen itinerary LLM provider. If
+using the voice endpoints, `GOOGLE_API_KEY` is always required for multimodal voice extraction.
 
 ### 6. Run Database Migrations
 
