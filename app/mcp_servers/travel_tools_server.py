@@ -1,4 +1,5 @@
 from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp.exceptions import ToolError
 
 import httpx
 
@@ -21,6 +22,7 @@ def get_weather(destination: str) -> str:
         geo_response = httpx.get(
             f"https://geocoding-api.open-meteo.com/v1/search?name={destination}&count=1"
         )
+        geo_response.raise_for_status()
         geo_data = geo_response.json()
         if not geo_data.get("results"):
             return f"Could not find weather data for {destination}."
@@ -29,13 +31,14 @@ def get_weather(destination: str) -> str:
             "https://api.open-meteo.com/v1/forecast"
             f"?latitude={location['latitude']}&longitude={location['longitude']}&current_weather=true"
         )
+        weather_response.raise_for_status()
         current = weather_response.json()["current_weather"]
         return (
             f"The current weather in {destination} is {current['temperature']}°C"
             f"with wind speeds of {current['windspeed']} km/h"
         )
-    except Exception:
-        return f"Failed to fetch weather for {destination}"
+    except httpx.HTTPError as e:
+        raise ToolError(f"Weather prpvider error for {destination}: {e}")
 
 @mcp.tool()
 def find_places(destination: str, category: str = "attraction") -> str:
@@ -45,6 +48,7 @@ def find_places(destination: str, category: str = "attraction") -> str:
         geo_response = httpx.get(
             f"https://geocoding-api.open-meteo.com/v1/search?name={destination}&count=1"
         )
+        geo_response.raise_for_status()
         geo_data = geo_response.json()
         if not geo_data.get("results"):
             return f"Could not find location data for {destination}."
@@ -57,13 +61,14 @@ def find_places(destination: str, category: str = "attraction") -> str:
             "https://overpass-api.de/api/interpreter",
             data={"data": overpass_query},
         )
+        places_response.raise_for_status()
         elements = places_response.json().get("elements", [])
         names = [el["tags"]["name"] for el in elements if el.get("tags", {}).get("name")]
         if not names:
             return f"No named {category} found near {destination}."
-        return f"{category.title()}s near {destination}: " + ", ".join(names[:10])
-    except Exception:
-        return f"Failed to fetch places for {destination}"
+        return f"{category.title()} is near {destination}: " + ", ".join(names[:10])
+    except httpx.HTTPError as e:
+        raise (f"Places provider error for {destination}: {e}")
 
 @mcp.tool()
 def get_route(origin: str, destination: str) -> str:
@@ -73,16 +78,25 @@ def get_route(origin: str, destination: str) -> str:
             response = httpx.get(
                 f"https://geocoding-api.open-meteo.com/v1/search?name={place}&count=1"
             )
-            result = response.json()["results"][0]
-            return result["longitude"], result["latitude"]
+            response.raise_for_status()
+            results = response.json().get("results")
+            if not results:
+                return None
+            return results[0]["longitude"], results[0]["latitude"]
         
-        origin_lon, origin_lat = geocode(origin)
-        dest_lon, dest_lat = geocode(destination)
+        origin_coords = geocode(origin)
+        if not origin_coords:
+            return f"Could not find location data for origin: {origin}"
+
+        dest_coords = geocode(destination)
+        if not dest_coords:
+            return f"Could not find location data for destination: {destination}"
 
         route_response = httpx.get(
             f"http://router.project-osrm.org/route/v1/driving/"
-            f"{origin_lon},{origin_lat};{dest_lon},{dest_lat}?overview=false"
+            f"{origin_coords[0]},{origin_coords[1]};{dest_coords[0]},{dest_coords[1]}?overview=false"
         )
+        route_response.raise_for_status()
         route_data = route_response.json()
         if route_data.get("code") != "Ok":
             return f"Could not calculate a route from {origin} to {destination}."
@@ -93,8 +107,8 @@ def get_route(origin: str, destination: str) -> str:
             f"Route from {origin} to {destination}: {distance_km:.1f} km, "
             f"approx. {duration_min:.0f} min by car"
         )
-    except Exception:
-        return f"Failed to calculate route from {origin} to {destination}"
+    except httpx.HTTPError as e:
+        raise ToolError(F"Routing provider error: {e}")
 
 if __name__ == "__main__":
     mcp.run(transport="stdio")
