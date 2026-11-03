@@ -2,6 +2,7 @@ from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode
+from app import models
 
 from app.agent.mcp_client import load_mcp_tools
 from app.agent.state import ItineraryAgentState
@@ -49,23 +50,23 @@ def route_after_agent(state: ItineraryAgentState) -> str:
     tool_calls = getattr(last_message, "tool_calls", None)
     if not tool_calls:
         return END
-    for call in tool_calls:
-        if call["name"] == "save_itinerary":
-            return "finalize"
+    
+    if len(tool_calls) == 1 and tool_calls[0]["name"] == "save_itinerary":
+        return "finalize"
     return "tools"
 
 def finalize(state: ItineraryAgentState) -> dict:
     last_message = state["messages"][-1]
     for call in last_message.tool_calls:
         if call["name"] == "save_itinerary":
-            return {"itinerary": call["args"]}
+            validated_output = models.ItineraryLLMOutput.model_validate(call["args"])
+            return {"itinerary": validated_output.model_dump()}
     return {}
 
 async def build_itinerary_graph():
     mcp_tools = await load_mcp_tools()
-    runtime_tools = [*NATIVE_TOOLS, *mcp_tools]
-    all_tools = [*runtime_tools, save_itinerary_tool]
-    model_with_tools = llm.bind_tools(all_tools, tool_choice="any")
+    runtime_tools = [*NATIVE_TOOLS, *mcp_tools, save_itinerary_tool]
+    model_with_tools = llm.bind_tools(runtime_tools, tool_choice="any")
 
     def call_agent(state: ItineraryAgentState) -> dict:
         new_messages = []
