@@ -26,7 +26,7 @@ Extract the following trip details:
   'family'). If not stated, default to 'balanced sightseeing'.
 """
 
-def transcribe_and_extract_trip(audio_bytes: bytes, mime_type: str) -> models.TripCreate:
+async def transcribe_and_extract_trip(audio_bytes: bytes, mime_type: str) -> models.TripCreate:
     if mime_type not in ALLOWED_AUDIO_MIME_TYPES:
         raise ValueError(f"Unsupported audio format: {mime_type}")
     if len(audio_bytes) > MAX_AUDIO_BYTES:
@@ -41,7 +41,7 @@ def transcribe_and_extract_trip(audio_bytes: bytes, mime_type: str) -> models.Tr
         model=settings.voice_llm_model,
         api_key=settings.google_api_key
     ).with_structured_output(models.TripCreate)
-    return llm.invoke([message])
+    return await llm.invoke([message])
 
 def itinerary_to_speech_text(destination: str, days: list[dict]) -> str:
     lines = [f"Here is your {len(days)}-day itinerary for {destination}."]
