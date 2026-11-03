@@ -17,7 +17,7 @@ async def create_trip_from_voice(
 ):
     audio_bytes = await audio.read()
     try:
-        trip_in = voice_service.transcribe_and_extract_trip(audio_bytes, audio.content_type)
+        trip_in = await voice_service.transcribe_and_extract_trip(audio_bytes, audio.content_type)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     new_trip = trip_service.create_trip(db, trip_in, current_user.id)
