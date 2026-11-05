@@ -1,0 +1,109 @@
+from langchain.chat_models import init_chat_model
+from langchain_core.messages import HumanMessage, SystemMessage
+from langgraph.graph import END, START, StateGraph
+from langgraph.prebuilt import ToolNode
+from app import models
+
+from app.agent.mcp_client import load_mcp_tools
+from app.agent.state import ItineraryAgentState
+from app.agent.tools import NATIVE_TOOLS, save_itinerary_tool
+from app.config import settings
+
+
+SYSTEM_PROMPT = """You are an expert, local travel agent responsible for building highly realistic, structured travel itineraries.
+
+You have access to the following tools:
+- get_weather: check the current weather/forecast for the destination to decide
+  between indoor and outdoor activities.
+- search_travel_knowledge: look up curated local tips, hidden gems, safety notes,
+  or destination pricing. Use `topic` to narrow the search (e.g. 'food', 'pricing').
+- find_places: find real, named points of interest (restaurants, attractions,
+  museums, hotels, parks) near the destination. Never invent place names.
+- get_route: check travel distance/time between two locations to keep each day's
+  plan geographically realistic.
+- save_itinerary: call this ONCE, as your final action, once you are done gathering
+  information and are ready to submit the complete structured itinerary. Do not
+  call it alongside other tools in the same turn.
+
+Guidelines:
+1. Budget: the total cost must align with the given budget tier.
+2. Geography: all locations must be real and reachable within the trip; use
+   find_places and get_route to verify this rather than guessing.
+3. Travel style: tailor pacing and activities to the requested style.
+4. Ground your plan in real data from the tools above rather than assumptions.
+"""
+
+PROVIDER_API_KEYS = {
+    "anthropic": settings.anthropic_api_key,
+    "google_genai": settings.google_api_key,
+}
+
+llm = init_chat_model(
+    model=settings.llm_model,
+    model_provider=settings.llm_provider,
+    api_key=PROVIDER_API_KEYS.get(settings.llm_provider),
+    max_tokens=3000,
+)
+
+def route_after_agent(state: ItineraryAgentState) -> str:
+    last_message = state["messages"][-1]
+    tool_calls = getattr(last_message, "tool_calls", None)
+    if not tool_calls:
+        return END
+    
+    if len(tool_calls) == 1 and tool_calls[0]["name"] == "save_itinerary":
+        return "finalize"
+    return "tools"
+
+def finalize(state: ItineraryAgentState) -> dict:
+    last_message = state["messages"][-1]
+    for call in last_message.tool_calls:
+        if call["name"] == "save_itinerary":
+            validated_output = models.ItineraryLLMOutput.model_validate(call["args"])
+            return {"itinerary": validated_output.model_dump()}
+    return {}
+
+async def build_itinerary_graph():
+    mcp_tools = await load_mcp_tools()
+    runtime_tools = [*NATIVE_TOOLS, *mcp_tools, save_itinerary_tool]
+    model_with_tools = llm.bind_tools(runtime_tools, tool_choice="any")
+
+    def call_agent(state: ItineraryAgentState) -> dict:
+        new_messages = []
+        if not state["messages"]:
+            user_prompt = (
+                f"Plan a highly realistic {state['days']}-day itinerary for a trip to "
+                f"{state['destination']}.\n"
+                f"Budget tier: {state['budget']}.\n"
+                f"Travel style: {state['trip_style']}.\n"
+                "Use your tools to check the weather, find real places, verify routes, "
+                "and pull local knowledge before finalizing the plan"
+            )
+            new_messages.append(HumanMessage(content=user_prompt))
+        conversation = [SystemMessage(content=SYSTEM_PROMPT), *state["messages"], *new_messages]
+        response = model_with_tools.invoke(conversation)
+        new_messages.append(response)
+        return {"messages": new_messages}
+
+    graph = StateGraph(ItineraryAgentState)
+    graph.add_node("agent", call_agent)
+    graph.add_node("tools", ToolNode(runtime_tools))
+    graph.add_node("finalize", finalize)
+
+    graph.add_edge(START, "agent")
+    graph.add_conditional_edges("agent", route_after_agent)
+    graph.add_edge("tools", "agent")
+    graph.add_edge("finalize", END)
+
+    return graph.compile()
+
+_itinerary_graph = None
+
+async def init_itinerary_graph():
+    global _itinerary_graph
+    _itinerary_graph = await build_itinerary_graph()
+
+def get_itinerary_graph():
+    if _itinerary_graph is None:
+        raise RuntimeError("Itinerary graph has not been initialised yet.")
+    return _itinerary_graph    
