@@ -8,8 +8,8 @@ from deepeval.test_case import LLMTestCase
 from app import models
 from app.agent.graph import init_itinerary_graph
 from app.services import llm_service
-from evaluation.dataset import dataset
-from evaluation.metrics import relevance_metric, completeness_metric, task_metric
+from app.evaluation.dataset import dataset
+from app.evaluation.metrics import relevance_metric, completeness_metric, task_metric
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 root_dir = os.path.abspath(os.path.join(current_dir, ".."))
