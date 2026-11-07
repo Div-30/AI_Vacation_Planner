@@ -20,4 +20,7 @@ langchain-anthropic
 langchain-google-genai
 mcp
 langchain-mcp-adapters
+deepeval
+pytest
+pytest-asyncio
 
