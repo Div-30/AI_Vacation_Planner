@@ -25,7 +25,7 @@ async def run_evaluation():
         models.Trip(id=3, destination="Paris", days=1, budget=300, trip_style="food tour"),
     ]
 
-    for golden, trip in zip(dataset.golden, sample_trips):
+    for golden, trip in zip(dataset.goldens, sample_trips):
         print(f"Generating itinerary for {trip.destination} ({trip.days} days)...")
         result = await llm_service.generate_itinerary_json(trip)
         actual_output_str = str(result)
