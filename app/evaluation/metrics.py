@@ -1,8 +1,6 @@
-import os
 from dotenv import load_dotenv
 
 load_dotenv()
-os.environ["USE_ANTHROPIC_MODEL"] = "YES"
 
 from deepeval.models import AnthropicModel
 from deepeval.metrics import GEval, TaskCompletionMetric
