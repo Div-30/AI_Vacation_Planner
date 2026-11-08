@@ -23,17 +23,11 @@ async def create_itinerary(request: models.ItineraryGenerateRequest, db: Session
             status_code = status.HTTP_409_CONFLICT,
             detail = f"An itinerary for trip {request.trip_id} already exists"
         )
-    try:
-        itinerary_in = models.ItineraryCreate(
-        trip_id = trip.id,
-        days = llm_response_dict["itinerary"]
-    )
-    except ValidationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"The AI generated an invalid itinerary format: {e.errors()}"
-        )
     validated_output = guardrails.validate_output_safety(destination=trip.destination, expected_days=trip.days, itinerary_dict=llm_response_dict)
+    itinerary_in = models.ItineraryCreate(
+        trip_id=trip.id,
+        days=validated_output.itinerary
+    )
     new_itinerary = itinerary_service.create_itinerary(db, itinerary_in)
     return {**new_itinerary.model_dump(), "message": "Itinerary generated and saved successfully!"}
 @router.get("/{trip_id}", response_model=models.ItineraryResponse)
