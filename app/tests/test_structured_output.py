@@ -25,7 +25,7 @@ def test_valid_itinerary_model():
             }
         ]
     }
-    validated = ItineraryLLMOutput.model_validated(data)
+    validated = ItineraryLLMOutput.model_validate(data)
     assert validated.destination == "London"
     assert len(validated.itinerary) == 1
     assert validated.itinerary[0].activities[0].location == "Buckingham Palace"
