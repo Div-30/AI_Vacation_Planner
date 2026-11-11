@@ -21,6 +21,14 @@ The itinerary generation system is powered by a stateful agent graph built with 
 - **MCP Tools (`app/mcp_servers/travel_tools_server.py`)**: Real-world external tools (`get_weather`, `find_places`, `get_route`) exposed via the **Model Context Protocol (MCP)**. They run in a separate subprocess communicating over stdio via `langchain-mcp-adapters`, keeping tool implementations decoupled from the core application.
 - **Agent Observability (`app/agent/observability.py`)**: Tracks agent executions with `AgentObservabilityCallback`, capturing end-to-end latency, prompt/completion token consumption, active model names, tool call counts, and execution errors.
 
+### Datadog Agent Observability & Dashboard
+
+The application integrates with **Datadog LLM Observability** (`ddtrace`) to monitor the agentic state machine, model latencies, token consumption, and tool executions.
+
+Visual proof of the Datadog dashboard and analytics is available in [`docs/screenshots/`](./docs/screenshots):
+- **[`01_dashboard_overview.png`](./docs/screenshots/01_dashboard_overview.png)**: High-level overview displaying 100% trace success rate, trace/span volume, completion token generation rate (3.15 tokens/sec), and cost metrics.
+- **[`02_trace_analytics.png`](./docs/screenshots/02_trace_analytics.png)**: Latency distributions across percentiles (P50, P75, P95), execution duration for `vacation-planner-agent`, and individual LLM span runtimes (`google_genai.request`).
+
 ### RAG Knowledge Base (`app/knowledge_base/`)
 
 This project includes a production-grade **Retrieval-Augmented Generation (RAG)** system that grounds AI-generated itineraries in real, curated travel knowledge:
