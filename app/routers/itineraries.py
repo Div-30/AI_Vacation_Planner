@@ -5,7 +5,7 @@ from pydantic import ValidationError
 from app import models
 from app.database import get_db
 from app.oauth2 import get_current_user
-from app.services import itinerary_service, trip_service, llm_service
+from app.services import guardrails, itinerary_service, trip_service, llm_service
 
 
 router = APIRouter(prefix="/api/itineraries", tags=["Itineraries"])
@@ -15,6 +15,7 @@ async def create_itinerary(request: models.ItineraryGenerateRequest, db: Session
     trip = trip_service.get_trip_by_id(db, trip_id = request.trip_id, owner_id = current_user.id)
     if not trip:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"The trip with id {request.trip_id} not found Or unauthorized")
+    guardrails.validate_input_safety(destination=trip.destination, trip_style=trip.trip_style, days=trip.days, budget=trip.budget)
     llm_response_dict = await llm_service.generate_itinerary_json(trip)
     existing = itinerary_service.get_itinerary_by_trip_id(db, trip_id=request.trip_id)
     if existing:
@@ -22,16 +23,11 @@ async def create_itinerary(request: models.ItineraryGenerateRequest, db: Session
             status_code = status.HTTP_409_CONFLICT,
             detail = f"An itinerary for trip {request.trip_id} already exists"
         )
-    try:
-        itinerary_in = models.ItineraryCreate(
-        trip_id = trip.id,
-        days = llm_response_dict["itinerary"]
+    validated_output = guardrails.validate_output_safety(destination=trip.destination, expected_days=trip.days, itinerary_dict=llm_response_dict)
+    itinerary_in = models.ItineraryCreate(
+        trip_id=trip.id,
+        days=validated_output.itinerary
     )
-    except ValidationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"The AI generated an invalid itinerary format: {e.errors()}"
-        )
     new_itinerary = itinerary_service.create_itinerary(db, itinerary_in)
     return {**new_itinerary.model_dump(), "message": "Itinerary generated and saved successfully!"}
 @router.get("/{trip_id}", response_model=models.ItineraryResponse)
