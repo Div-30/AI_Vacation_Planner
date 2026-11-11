@@ -20,6 +20,13 @@ async def generate_itinerary_json(trip: models.Trip) -> dict:
     itinerary_graph = get_itinerary_graph()
     result = await itinerary_graph.ainvoke(initial_state, config=config)
 
+    try:
+        from ddtrace.llmobs import LLMObs
+        if LLMObs.enabled:
+            LLMObs.flush()
+    except Exception:
+        pass
+
     summary = observer.get_summary()
     logger.info(f"Agent Execution Observability Summary: {summary}")
 

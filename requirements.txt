@@ -23,4 +23,5 @@ langchain-mcp-adapters
 deepeval
 pytest
 pytest-asyncio
+ddtrace
 
