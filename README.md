@@ -6,81 +6,95 @@ This project follows a decoupled, enterprise-grade RESTful architecture using **
 
 ### Core Layers
 
-- **Routing Layer (`app/routers/`)**: Acts as the traffic controller. Files like `trips.py` and `auth.py` define the API endpoints, handle HTTP requests, enforce security dependencies (like `get_current_user`), and format responses using Pydantic schemas.
-- **Service Layer (`app/services/`)**: Contains the core business logic and database queries. Routers pass validated data to these services (e.g., `trip_service.py`), keeping the API layer lightweight and completely isolated from direct SQLAlchemy operations.
-- **Data Validation (`app/models.py` & `schemas`)**: Utilizes Pydantic to strictly type-check incoming JSON payloads (Base, Create, Update) and format outgoing responses (Response models), automatically stripping sensitive data like password hashes.
-- **Security Checkpoint (`app/oauth2.py` & `utils.py`)**: Implements OAuth2 with JWT (JSON Web Tokens). Every protected route requires a valid Bearer token. The system strictly enforces a **Private Data Model**, ensuring database queries mathematically restrict users to viewing and modifying only records tied to their specific `owner_id`.
-- **Database Management (`alembic/`)**: Uses Alembic for version-controlled database migrations. Complex nested data, such as daily itinerary schedules, are natively mapped to PostgreSQL's highly efficient `JSONB` columns.
-- **AI & Agentic Workflows (`app/agent/`, `app/services/llm_service.py`)**: Integrates large language models using a LangGraph agentic loop with native Tool Use. Rather than relying on string parsing, the LLM iteratively executes tools — a mix of in-process native tools and real-world tools loaded via the Model Context Protocol (MCP) — to gather context (like live weather, real places, and routes) and strictly structures its outputs via a `save_itinerary` tool whose schema is auto-generated from a dedicated Pydantic model (`ItineraryLLMOutput`), ensuring reliable and validated itinerary generation. See [Agent Tooling](#agent-tooling-native-tools-vs-mcp-tools) below for details.
+- **Routing Layer (`app/routers/`)**: Acts as the traffic controller. Files like `trips.py`, `itineraries.py`, and `auth.py` define API endpoints, handle HTTP requests, enforce security dependencies (like `get_current_user`), and format responses using Pydantic schemas.
+- **Service Layer (`app/services/`)**: Contains core business logic and database queries (e.g., `trip_service.py`, `itinerary_service.py`), keeping routers lightweight and decoupled from direct database operations.
+- **Data Validation (`app/models.py`)**: Utilizes SQLModel and Pydantic to strictly type-check incoming JSON payloads and format outgoing responses, automatically stripping sensitive data like password hashes.
+- **Security & Data Isolation (`app/oauth2.py` & `app/utils.py`)**: Implements OAuth2 with JWT (JSON Web Tokens). Every protected route requires a valid Bearer token, strictly enforcing tenancy isolation so users can access and modify only records matching their `owner_id`.
+- **Database Management (`alembic/`)**: Uses Alembic for version-controlled database migrations. Complex nested itinerary schedules are natively stored using PostgreSQL `JSONB` columns.
 
-### Agent Tooling: Native Tools vs. MCP Tools
+### Agentic Loop & Tooling (`app/agent/`)
 
-The itinerary agent (`app/agent/graph.py`) is a LangGraph state machine built from two kinds of tools:
+The itinerary generation system is powered by a stateful agent graph built with **LangGraph**:
 
-- **Native tools** (`app/agent/tools.py`) — plain LangChain `@tool`-decorated Python functions that run in-process, e.g. `search_travel_knowledge`, which queries the local RAG knowledge base.
-- **MCP tools** (`app/mcp_servers/travel_tools_server.py`) — real-world tools (`get_weather`, `find_places`, `get_route`) exposed via the **Model Context Protocol (MCP)**. They run as a separate subprocess and communicate with the agent over stdio, which keeps tool implementations decoupled from the agent process and makes it easy to add or swap tool servers without touching agent code.
-
-Both tool types are normalized into the same LangChain `Tool` interface via `langchain-mcp-adapters` (`app/agent/mcp_client.py`), so the agent graph treats them identically regardless of origin.
-
-**Startup lifecycle:** Loading MCP tool definitions is an async operation, so the agent graph is built
-**once** during the FastAPI app's `lifespan` startup (`init_itinerary_graph()` in `app/main.py`) and
-reused across requests via `get_itinerary_graph()`. With `langchain-mcp-adapters` (0.3.2), tool
-invocations communicate over temporary stdio sessions to the MCP server. Because all travel tools are
-stateless, this per-call execution is lightweight, isolated, and safe.
+- **State Machine Flow (`app/agent/graph.py`)**: Executes a cyclic graph `START -> agent -> (tools | finalize) -> agent -> END`. The agent iteratively executes tools until it calls `save_itinerary` once ready to submit the validated itinerary.
+- **Native Tools (`app/agent/tools.py`)**: In-process LangChain tools such as `search_travel_knowledge`, which queries the local ChromaDB vector store.
+- **MCP Tools (`app/mcp_servers/travel_tools_server.py`)**: Real-world external tools (`get_weather`, `find_places`, `get_route`) exposed via the **Model Context Protocol (MCP)**. They run in a separate subprocess communicating over stdio via `langchain-mcp-adapters`, keeping tool implementations decoupled from the core application.
+- **Agent Observability (`app/agent/observability.py`)**: Tracks agent executions with `AgentObservabilityCallback`, capturing end-to-end latency, prompt/completion token consumption, active model names, tool call counts, and execution errors.
 
 ### RAG Knowledge Base (`app/knowledge_base/`)
 
-This project includes a production-grade **Retrieval-Augmented Generation (RAG)** system that grounds AI-generated itineraries in real, curated travel knowledge rather than relying solely on the LLM's training data.
+This project includes a production-grade **Retrieval-Augmented Generation (RAG)** system that grounds AI-generated itineraries in real, curated travel knowledge:
 
-The system operates across two pipelines:
-
-**Pipeline 1 — Indexing (run once, or when documents are updated):**
-
-- `ingestion.py` — Loads raw `.txt` travel documents from `documents/` and wraps each file into a structured `TravelDocument` object.
-- `chunking.py` — Splits each document into smaller overlapping text chunks (800 chars, 150 overlap) using `RecursiveCharacterTextSplitter`.
-- `embedding.py` — Converts each chunk into a 384-dimensional semantic vector using the local `all-MiniLM-L6-v2` sentence transformer model.
-- `vector_store.py` — Persists the vectors, raw text, and metadata tags (`destination`, `source`, `doc_type`) into a local ChromaDB vector database using HNSW + cosine similarity indexing.
-- `pipeline.py` — Master runner that chains all four steps above into a single callable function.
-
-**Pipeline 2 — Query (runs on every itinerary generation request):**
-
-- `retrieval.py` — Embeds the user's destination query into a vector and performs a semantic similarity search against ChromaDB, with optional metadata filtering by destination.
-- `context_assembler.py` — Formats the top retrieved chunks into a clearly labeled text block (bounded by `=== TRAVEL KNOWLEDGE BASE ===` markers) ready for LLM prompt injection.
-- `llm_service.py` — Calls the context assembler before building the user prompt, injecting the retrieved knowledge at the top of the prompt. The LLM is explicitly instructed via a dedicated constraint to use the knowledge base when crafting the itinerary.
+- **Indexing Pipeline (`app/knowledge_base/pipeline.py`)**: Ingests `.txt` travel documents, chunks text with `RecursiveCharacterTextSplitter` (800 chars, 150 overlap), generates 384-dimensional semantic embeddings using `all-MiniLM-L6-v2`, and persists vectors to a local ChromaDB collection using HNSW + cosine similarity.
+- **Retrieval Pipeline (`app/knowledge_base/retrieval.py` & `context_assembler.py`)**: Queries ChromaDB with semantic search and formats top retrieved chunks into structured context blocks for the agent's knowledge retrieval tool.
 
 ### Voice Integration (`app/services/voice_service.py`, `app/routers/voice.py`)
 
-Users can create trips by speaking and listen to generated itineraries instead of only reading them.
-
-- **Voice → Trip**: `POST /api/voice/trips` accepts an audio file, sends the raw audio bytes directly to a multimodal LLM (no separate transcription step) with `.with_structured_output(TripCreate)`, and creates a trip from the extracted destination, days, budget, and style — defaulting any field the speaker didn't mention.
-- **Itinerary → Audio**: `GET /api/voice/itineraries/{trip_id}/audio` converts a saved itinerary into natural narration text, synthesizes it to speech via the `espeak` CLI, and streams the resulting `audio/wav` bytes directly in the response. No audio file is ever persisted to disk — it exists only for the duration of the request.
+- **Voice → Trip**: `POST /api/voice/trips` accepts an audio file, sends raw audio bytes directly to a multimodal LLM with `.with_structured_output(TripCreate)`, and creates a trip without a separate transcription step.
+- **Itinerary → Audio**: `GET /api/voice/itineraries/{trip_id}/audio` converts a saved itinerary into natural narration text and streams synthesized `audio/wav` bytes directly via the `espeak` CLI without persisting files to disk.
 
 ---
 
 ## LLM Integration
 
-This project is **provider-agnostic**: the LLM provider and model are configuration, not code. Both the itinerary agent and the voice features read their provider/model from environment variables via `app/config.py`, and the agent is built using LangChain's `init_chat_model()`, which dispatches to the correct provider's chat model class at runtime.
+The application is provider-agnostic: the LLM provider and model are configuration, not code. Both the itinerary agent and voice features read configuration from environment variables via `app/config.py`, using LangChain's `init_chat_model()` to dispatch to the correct chat model class at runtime.
 
-### Supported providers
+### Supported Providers
 
 | Provider           | `LLM_PROVIDER` value       | Required key        |
 | ------------------ | -------------------------- | ------------------- |
 | Google (Gemini)    | `google_genai` _(default)_ | `GOOGLE_API_KEY`    |
 | Anthropic (Claude) | `anthropic`                | `ANTHROPIC_API_KEY` |
 
-### Relevant environment variables
+### Integration Details
 
-- `LLM_PROVIDER` — which provider powers the itinerary agent's tool-calling loop (`app/agent/graph.py`).
-- `LLM_MODEL` — the specific model ID used by the itinerary agent (must belong to `LLM_PROVIDER`).
-- `VOICE_LLM_MODEL` — the model used for voice trip extraction (`app/services/voice_service.py`). This must support multimodal audio input, since raw audio bytes are sent directly to it rather than pre-transcribed text.
-- `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY` — the key matching your chosen `LLM_PROVIDER` for the itinerary
-  agent. **Note:** Voice extraction (`voice_service.py`) relies directly on Gemini's multimodal audio
-  support and always uses `ChatGoogleGenerativeAI`. Therefore, `GOOGLE_API_KEY` is **always required** if
-  using the voice feature, even when `LLM_PROVIDER=anthropic`.
+- **Structured Output Enforcement**: Instead of fragile JSON string parsing, the agent binds tools with `tool_choice="any"` and structures output through a specialized `save_itinerary` tool whose schema is auto-generated from the `ItineraryLLMOutput` Pydantic model.
+- **Multimodal Audio Support**: Voice trip extraction streams raw audio bytes directly into Gemini's multimodal LLM (`ChatGoogleGenerativeAI`). Therefore, `GOOGLE_API_KEY` is always required for voice features, even when `LLM_PROVIDER=anthropic`.
+- **Provider Switching**: Switch providers simply by updating `LLM_PROVIDER` and `LLM_MODEL` in `.env` and restarting the server—no code changes required.
 
-### Switching providers
+---
 
-To switch the itinerary agent from Gemini to Claude (or vice versa), update `LLM_PROVIDER` and `LLM_MODEL` in your `.env` file and restart the server — no code changes required.
+## Security and Guardrails
+
+The application enforces multi-layered defense across user requests and LLM generation (`app/services/guardrails.py`):
+
+- **Pre-Execution Guardrails (`validate_input_safety`)**:
+  - **Constraint Validation**: Enforces duration limits (1–30 days), positive budgets, and valid destination strings.
+  - **Prompt Injection Defense**: Evaluates inputs against regex patterns (`PROMPT_INJECTION_PATTERNS`) targeting system prompt leaks, jailbreaks, and instructions override (e.g., `"ignore previous instructions"`, `"DAN mode"`, `"developer mode"`), raising HTTP 400 on detection.
+- **Post-Execution Guardrails (`validate_output_safety`)**:
+  - **Schema Validation**: Validates the agent output dictionary against `ItineraryLLMOutput`.
+  - **Duration Consistency**: Verifies that the number of days generated strictly matches the requested duration.
+  - **Schedule Completeness**: Ensures that every generated day contains non-empty scheduled activities before committing to the database.
+- **Tenant Isolation & Access Control**: Protected routes enforce OAuth2 Bearer token authentication (`app/oauth2.py`), mathematically restricting database queries to records matching the authenticated user's `owner_id`.
+
+---
+
+## Evaluation Approach
+
+The project leverages [DeepEval](https://github.com/confident-ai/deepeval) for automated LLM-as-a-judge evaluation of generated itineraries (`app/evaluation/`):
+
+- **Evaluation Dataset (`app/evaluation/dataset.py`)**: Golden test cases covering diverse destinations, durations, and budget tiers.
+- **Evaluation Metrics (`app/evaluation/metrics.py`)**:
+  - **Itinerary Relevance (`GEval`)**: Measures destination matching, travel style alignment, and budget realism using explicit domain rubrics.
+  - **Itinerary Completeness (`GEval`)**: Verifies day counts, structured time slots (morning, afternoon, evening), locations, and realistic activity durations.
+  - **Task Completion (`TaskCompletionMetric`)**: Validates that the agent fulfills the overarching goal of generating a realistic, geographically valid, and budget-aligned itinerary.
+- **Running Evaluations**:
+  ```bash
+  python app/evaluation/evaluate_itinerary.py
+  ```
+
+---
+
+## Testing Strategy
+
+Automated test suites are managed with `pytest` under `app/tests/`:
+
+- **Guardrail Tests (`app/tests/test_guardrails.py`)**: Verifies that `validate_input_safety` blocks prompt injections, excessive day counts, and invalid budgets while allowing legitimate requests.
+- **Structured Output Schema Tests (`app/tests/test_structured_output.py`)**: Tests that `ItineraryLLMOutput` properly validates conformant itinerary payloads and rejects invalid schemas or missing fields.
+- **Running Tests**:
+  ```bash
+  pytest -v
+  ```
 
 ---
 
